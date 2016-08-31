@@ -30,9 +30,9 @@ typedef struct {
 } RunTracker_GPS;
 
 // Public Functions
-void RunTracker_GPS_init(RunTracker_GPS * const, UART_HandleTypeDef *);
-void RunTracker_GPS_rxCallback(RunTracker_GPS * const, const char *);
-void RunTracker_GPS_sendCommand(RunTracker_GPS * const, const char *);
+void RunTracker_GPS_init(RunTracker_GPS *, UART_HandleTypeDef *);
+void RunTracker_GPS_rxCallback(RunTracker_GPS *);
+void RunTracker_GPS_sendCommand(RunTracker_GPS *, const char *);
 void RunTracker_GPS_pause(bool);
 bool RunTracker_GPS_wakeup(void);
 bool RunTracker_GPS_standby(void);

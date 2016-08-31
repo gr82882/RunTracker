@@ -19,7 +19,7 @@ volatile bool inStandbyMode;
 
 
 // Private function prototypes
-static bool RunTracker_parse(RunTracker_GPS * const GPS, char * nmea);
+static bool RunTracker_parse(RunTracker_GPS * GPS, char * nmea);
 static uint8_t parseHex(char c);
 
 
@@ -89,7 +89,7 @@ void RunTracker_GPS_init(RunTracker_GPS * const GPS, UART_HandleTypeDef * huart)
   GPS->huart		= huart;
 }
 
-static bool RunTracker_parse(RunTracker_GPS * const GPS, char * nmea) {
+static bool RunTracker_parse(RunTracker_GPS * GPS, char * nmea) {
   // do checksum check
 
   // first look if we even have one
@@ -322,7 +322,7 @@ static bool RunTracker_parse(RunTracker_GPS * const GPS, char * nmea) {
   return false;
 }
 
-void RunTracker_GPS_rxCallback(RunTracker_GPS * const GPS, const char * rxBuffer)
+void RunTracker_GPS_rxCallback(RunTracker_GPS * GPS)
 {
   if(GPS->paused) return;
 
@@ -330,7 +330,7 @@ void RunTracker_GPS_rxCallback(RunTracker_GPS * const GPS, const char * rxBuffer
   // and pass a message off to the RunTracker thread to tell it to parse
 }
 
-void RunTracker_GPS_sendCommand(RunTracker_GPS * const GPS, const char * txBuffer)
+void RunTracker_GPS_sendCommand(RunTracker_GPS * GPS, const char * txBuffer)
 {
   HAL_UART_Transmit_DMA(GPS->huart, txBuffer, strlen(txBuffer));
 }
