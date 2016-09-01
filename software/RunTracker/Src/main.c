@@ -171,6 +171,13 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  if(huart == &huart2)
+  {
+    RunTracker_GPS_rxCallback(&GPS);
+  }
+}
 
 /* USER CODE END 4 */
 

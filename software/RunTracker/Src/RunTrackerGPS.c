@@ -1,4 +1,5 @@
 #include "RunTrackerGPS.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -7,39 +8,41 @@
 #define MAXLINELENGTH 120
 
 // we double buffer: read one line in and leave one for the main program
-volatile char line1[MAXLINELENGTH];
-volatile char line2[MAXLINELENGTH];
+char line1[MAXLINELENGTH];
+char line2[MAXLINELENGTH];
 // our index into filling the current line
-volatile uint8_t lineidx=0;
+uint8_t lineidx=0;
 // pointers to the double buffers
-volatile char *currentline;
-volatile char *lastline;
-volatile bool recvdflag;
-volatile bool inStandbyMode;
+char *currentline;
+char *lastline;
+bool inStandbyMode;
 
+// Private struct
+typedef struct
+{ /* Mail object structure */
+  uint32_t event; /* var1 is a uint32_t */
+  uint32_t var2; /* var2 is a uint32_t */
+  uint8_t var3; /* var3 is a uint8_t */
+} GPS_mail_TypeDef;
+
+typedef enum
+{
+  PARSE_NMEA
+} GPS_event_type;
+
+
+//TODO These should be in some system-wide configuration file
+#define MAIL_SIZE        (uint32_t) 1
+#define blckqSTACK_SIZE   configMINIMAL_STACK_SIZE
 
 // Private function prototypes
-static bool RunTracker_parse(RunTracker_GPS * GPS, char * nmea);
+static void RunTracker_GPS_CreateThread(RunTracker_GPS * GPS);
+static void RunTracker_GPS_Thread(const void *arg);
+static bool RunTracker_GPS_parse(RunTracker_GPS * GPS, char * nmea);
 static uint8_t parseHex(char c);
 
 
 /*
- * typedef struct {
-  uint8_t hour, minute, seconds, year, month, day;
-  uint16_t milliseconds;
-  float latitude, longitude;
-  int32_t latitude_fixed, longitude_fixed;
-  float latitudeDegrees, longitudeDegrees;
-  float geoidheight, altitude;
-  float speed, angle, magvariation, HDOP;
-  char lat, lon, mag;
-  bool fix;
-  uint8_t fixquality, satellites;
-
-  UART_HandleTypeDef * huart;
-
-} RunTracker_GPS;
-
 // Public Functions
 void RunTracker_GPS_init(RunTracker_GPS * const, UART_HandleTypeDef *);
 void RunTracker_GPS_rxCallback(RunTracker_GPS * const);
@@ -50,12 +53,61 @@ bool RunTracker_GPS_standby(void);
 bool RunTracker_GPS_LOCUS_StartLogger(void);
 bool RunTracker_GPS_LOCUS_StopLogger(void);
 bool RunTracker_GPS_LOCUS_ReadStatus(void);
-
  */
 
-void RunTracker_GPS_init(RunTracker_GPS * const GPS, UART_HandleTypeDef * huart)
+// This is the main GPS thread for the RunTracker
+static void RunTracker_GPS_Thread(const void * argument)
 {
-  recvdflag 		= false;
+  RunTracker_GPS  *GPS = (RunTracker_GPS *)argument;
+  GPS_mail_TypeDef  *pMail;
+  osEvent     event;
+
+  // Configure the GPS
+  // TODO We should probably have some sort of ACK or check on DMA transfer complete
+  //      before sending subsequent commands
+  RunTracker_GPS_sendCommand(GPS, PMTK_SET_NMEA_OUTPUT_RMCGGA);
+  RunTracker_GPS_sendCommand(GPS, PMTK_SET_NMEA_UPDATE_1HZ);
+  RunTracker_GPS_sendCommand(GPS, PGCMD_ANTENNA);
+
+  while(1)
+  {
+    // wait for mail
+    event = osMailGet(GPS->mailId, osWaitForever);
+
+    if(event.status == osEventMail)
+    {
+      pMail = event.value.p;
+
+      // TODO Do stuff with mail
+      switch(pMail->event)
+      {
+      case PARSE_NMEA:
+        RunTracker_GPS_parse(GPS, currentline);
+        break;
+      }
+
+      // Free mail message memory
+      osMailFree(GPS->mailId, pMail);
+    }
+  }
+}
+
+static void RunTracker_GPS_CreateThread(RunTracker_GPS * GPS)
+{
+  // Create the mailbox queue
+  osMailQDef(GPSMail, MAIL_SIZE, GPS_mail_TypeDef);
+  GPS->mailId = osMailCreate(osMailQ(GPSMail), NULL);
+
+  // Create the GPS Thread
+  osThreadDef(GPSThread, RunTracker_GPS_Thread, osPriorityBelowNormal, 0, blckqSTACK_SIZE);
+  osThreadCreate(osThread(GPSThread), GPS);
+}
+
+
+
+void RunTracker_GPS_init(RunTracker_GPS * GPS, UART_HandleTypeDef * huart)
+{
+  // Initialize all member variables
   GPS->paused 		= false;
   lineidx 		= 0;
   currentline 		= line1;
@@ -87,9 +139,12 @@ void RunTracker_GPS_init(RunTracker_GPS * const GPS, UART_HandleTypeDef * huart)
   GPS->HDOP		= 0.0f;
 
   GPS->huart		= huart;
+
+  // Create the GPS Thread and associated input queue
+  RunTracker_GPS_CreateThread(GPS);
 }
 
-static bool RunTracker_parse(RunTracker_GPS * GPS, char * nmea) {
+static bool RunTracker_GPS_parse(RunTracker_GPS * GPS, char * nmea) {
   // do checksum check
 
   // first look if we even have one
@@ -184,37 +239,37 @@ static bool RunTracker_parse(RunTracker_GPS * GPS, char * nmea) {
     p = strchr(p, ',')+1;
     if (',' != *p)
     {
-	GPS->fixquality = atoi(p);
+      GPS->fixquality = atoi(p);
     }
 
     p = strchr(p, ',')+1;
     if (',' != *p)
     {
-	GPS->satellites = atoi(p);
+      GPS->satellites = atoi(p);
     }
 
     p = strchr(p, ',')+1;
     if (',' != *p)
     {
-	GPS->HDOP = atof(p);
+      GPS->HDOP = atof(p);
     }
 
     p = strchr(p, ',')+1;
     if (',' != *p)
     {
-	GPS->altitude = atof(p);
+      GPS->altitude = atof(p);
     }
 
     p = strchr(p, ',')+1;
     p = strchr(p, ',')+1;
     if (',' != *p)
     {
-	GPS->geoidheight = atof(p);
+      GPS->geoidheight = atof(p);
     }
     return true;
   }
   if (strstr(nmea, "$GPRMC")) {
-   // found RMC
+    // found RMC
     char *p = nmea;
 
     // get time
@@ -297,14 +352,14 @@ static bool RunTracker_parse(RunTracker_GPS * GPS, char * nmea) {
     p = strchr(p, ',')+1;
     if (',' != *p)
     {
-	GPS->speed = atof(p);
+      GPS->speed = atof(p);
     }
 
     // angle
     p = strchr(p, ',')+1;
     if (',' != *p)
     {
-	GPS->angle = atof(p);
+      GPS->angle = atof(p);
     }
 
     p = strchr(p, ',')+1;
@@ -324,57 +379,74 @@ static bool RunTracker_parse(RunTracker_GPS * GPS, char * nmea) {
 
 void RunTracker_GPS_rxCallback(RunTracker_GPS * GPS)
 {
+  GPS_mail_TypeDef *pMail;
+
   if(GPS->paused) return;
 
   //TODO This function should copy the rxbuffer to a local variable
   // and pass a message off to the RunTracker thread to tell it to parse
-}
 
-void RunTracker_GPS_sendCommand(RunTracker_GPS * GPS, const char * txBuffer)
-{
-  HAL_UART_Transmit_DMA(GPS->huart, txBuffer, strlen(txBuffer));
-}
-/*
-static char RunTracker_GPS_read(RunTracker_GPS * const GPS, char c) {
+  uint16_t cnt = GPS->huart->RxXferCount;
 
-  if (GPS->paused) return c;
-
+  // Copy line
+  // TODO Make this more efficient with a memcpy, strfind, etc.
+  for(int i=0; i<cnt; i++)
   {
-    if(!gpsHwSerial->available()) return c;
-    c = gpsHwSerial->read();
-  }
+    char c = GPS->huart->pRxBuffPtr[cnt++];
+    if(c == '\n')
+    {
+      currentline[lineidx] = 0;
 
-  if (c == '\n') {
-    currentline[lineidx] = 0;
+      if(currentline == line1)
+      {
+        currentline = line2;
+        lastline = line1;
+      }
+      else
+      {
+        currentline = line1;
+        lastline = line2;
+      }
 
-    if (currentline == line1) {
-      currentline = line2;
-      lastline = line1;
-    } else {
-      currentline = line1;
-      lastline = line2;
+
+      lineidx = 0;
+
+      // Send a mail message to parse the NMEA string
+      pMail = osMailAlloc(GPS->mailId, osWaitForever);
+
+      // TODO Make this something meaningful
+      pMail->event = PARSE_NMEA;
+      if(osMailPut(GPS->mailId, pMail) != osOK)
+      {
+        // TODO Some kind of error here
+      }
     }
 
-    lineidx = 0;
-    recvdflag = true;
+    currentline[lineidx] = c;
+    if(lineidx >= MAXLINELENGTH)
+    {
+      lineidx = MAXLINELENGTH-1;
+    }
+
   }
 
-  currentline[lineidx++] = c;
-  if (lineidx >= MAXLINELENGTH)
-    lineidx = MAXLINELENGTH-1;
+}
 
-  return c;
-}*/
+void RunTracker_GPS_sendCommand(RunTracker_GPS * GPS, uint8_t * txBuffer)
+{
+  HAL_UART_Transmit_DMA(GPS->huart, txBuffer, strlen((const char*)txBuffer));
+}
+
 
 static uint8_t parseHex(char c) {
-    if (c < '0')
-      return 0;
-    if (c <= '9')
-      return c - '0';
-    if (c < 'A')
-       return 0;
-    if (c <= 'F')
-       return (c - 'A')+10;
-    // if (c > 'F')
+  if (c < '0')
     return 0;
+  if (c <= '9')
+    return c - '0';
+  if (c < 'A')
+    return 0;
+  if (c <= 'F')
+    return (c - 'A')+10;
+  // if (c > 'F')
+  return 0;
 }

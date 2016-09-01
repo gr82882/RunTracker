@@ -9,6 +9,8 @@
 #define RUNTRACKERGPS_H_
 
 #include "stm32f4xx.h"
+#include "cmsis_os.h"
+
 #include <stdbool.h>
 
 
@@ -26,13 +28,14 @@ typedef struct {
   uint8_t fixquality, satellites;
 
   UART_HandleTypeDef * huart;
+  osMailQId mailId;
 
 } RunTracker_GPS;
 
 // Public Functions
 void RunTracker_GPS_init(RunTracker_GPS *, UART_HandleTypeDef *);
 void RunTracker_GPS_rxCallback(RunTracker_GPS *);
-void RunTracker_GPS_sendCommand(RunTracker_GPS *, const char *);
+void RunTracker_GPS_sendCommand(RunTracker_GPS *, uint8_t *);
 void RunTracker_GPS_pause(bool);
 bool RunTracker_GPS_wakeup(void);
 bool RunTracker_GPS_standby(void);
