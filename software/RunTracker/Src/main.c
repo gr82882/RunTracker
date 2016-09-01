@@ -43,7 +43,6 @@
 #include "wwdg.h"
 #include "gpio.h"
 
-
 /* USER CODE BEGIN Includes */
 #include "RunTrackerGPS.h"
 
@@ -194,14 +193,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 /* USER CODE BEGIN Callback 1 */
 
 /* USER CODE END Callback 1 */
-}
-
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-  if(huart == &huart2)
-  {
-      RunTracker_GPS_rxCallback(&GPS);
-  }
 }
 
 /**

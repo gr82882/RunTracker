@@ -71,7 +71,7 @@
 /*---------- -----------*/
 #define USBD_SELF_POWERED     1
 /*---------- -----------*/
-#define USBD_CDC_INTERVAL     1000
+#define MSC_MEDIA_PACKET     512
 
 /****************************************/
 /* #define for FS and HS identification */
