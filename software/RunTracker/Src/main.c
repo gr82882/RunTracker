@@ -175,7 +175,15 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
   if(huart == &huart2)
   {
-    RunTracker_GPS_rxCallback(&GPS);
+    RunTracker_GPS_rxCallback(&GPS, false);
+  }
+}
+
+void HAL_UART_RxHalfCpltCallback(UART_HandleTypeDef *huart)
+{
+  if(huart == &huart2)
+  {
+    RunTracker_GPS_rxCallback(&GPS, true);
   }
 }
 

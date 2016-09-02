@@ -11,8 +11,11 @@
 #include "stm32f4xx.h"
 #include "cmsis_os.h"
 
+#include "CircularBuffer.h"
+
 #include <stdbool.h>
 
+#define UART_DMA_BUFFER_SIZE  240
 
 typedef struct {
   uint8_t hour, minute, seconds, year, month, day;
@@ -25,23 +28,29 @@ typedef struct {
   char lat, lon, mag;
   bool fix;
   bool paused;
+  bool inStandby;
   uint8_t fixquality, satellites;
 
   UART_HandleTypeDef * huart;
   osMailQId mailId;
 
+  CircularBuffer_TypeDef ringBuffer;
 } RunTracker_GPS;
+
+typedef enum {
+  NMEA_INVALID_CMD = 0,
+  NMEA_UNSUPPORTED_CMD,
+  NMEA_ACTION_FAILED,
+  NMEA_SUCCESS
+} NMEA_Return_Type;
+
 
 // Public Functions
 void RunTracker_GPS_init(RunTracker_GPS *, UART_HandleTypeDef *);
-void RunTracker_GPS_rxCallback(RunTracker_GPS *);
-void RunTracker_GPS_sendCommand(RunTracker_GPS *, uint8_t *);
-void RunTracker_GPS_pause(bool);
-bool RunTracker_GPS_wakeup(void);
-bool RunTracker_GPS_standby(void);
-bool RunTracker_GPS_LOCUS_StartLogger(void);
-bool RunTracker_GPS_LOCUS_StopLogger(void);
-bool RunTracker_GPS_LOCUS_ReadStatus(void);
+void RunTracker_GPS_rxCallback(RunTracker_GPS *, bool);
+void RunTracker_GPS_pause(RunTracker_GPS * GPS, bool);
+bool RunTracker_GPS_wakeup(RunTracker_GPS * GPS);
+bool RunTracker_GPS_standby(RunTracker_GPS * GPS);
 
 // different commands to set the update rate from once a second (1 Hz) to 10 times a second (10Hz)
 // Note that these only control the rate at which the position is echoed, to actually speed up the
@@ -100,68 +109,7 @@ bool RunTracker_GPS_LOCUS_ReadStatus(void);
 #define PGCMD_NOANTENNA "$PGCMD,33,0*6D"
 
 // how long to wait when we're looking for a response
-#define MAXWAITSENTENCE 5
-
-
-/*
-
-class RunTracker_GPS {
-public:
-  RunTracker_GPS(HardwareSerial * ser);
-  virtual ~RunTracker_GPS();
-
-  void begin(uint32_t baud);
-
-  char *lastNMEA(void);
-  bool newNMEAreceived();
-  void common_init(void);
-
-  void sendCommand(const char *);
-
-  void pause(bool b);
-
-  bool parseNMEA(char *response);
-  uint8_t parseHex(char c);
-
-  char read(char);
-  bool parse(char *);
-  void interruptReads(bool r);
-
-  bool wakeup(void);
-  bool standby(void);
-
-  uint8_t hour, minute, seconds, year, month, day;
-  uint16_t milliseconds;
-  // Floating point latitude and longitude value in degrees.
-  float latitude, longitude;
-  // Fixed point latitude and longitude value with degrees stored in units of 1/100000 degrees,
-  // and minutes stored in units of 1/100000 degrees.  See pull #13 for more details:
-  //   https://github.com/adafruit/Adafruit-GPS-Library/pull/13
-  int32_t latitude_fixed, longitude_fixed;
-  float latitudeDegrees, longitudeDegrees;
-  float geoidheight, altitude;
-  float speed, angle, magvariation, HDOP;
-  char lat, lon, mag;
-  bool fix;
-  uint8_t fixquality, satellites;
-
-  bool waitForSentence(const char *wait, uint8_t max = MAXWAITSENTENCE);
-  bool LOCUS_StartLogger(void);
-  bool LOCUS_StopLogger(void);
-  bool LOCUS_ReadStatus(void);
-
-  uint16_t LOCUS_serial, LOCUS_records;
-  uint8_t LOCUS_type, LOCUS_mode, LOCUS_config, LOCUS_interval, LOCUS_distance, LOCUS_speed, LOCUS_status, LOCUS_percent;
-private:
-  bool paused;
-
-  uint8_t parseResponse(char *response);
-
-  HardwareSerial *gpsHwSerial;
-};
-*/
-
-
+#define MAXWAITSENTENCE 5000
 
 
 #endif /* RUNTRACKERGPS_H_ */

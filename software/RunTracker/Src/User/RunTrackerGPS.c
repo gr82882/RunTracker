@@ -7,15 +7,10 @@
 // how long are max NMEA lines to parse?
 #define MAXLINELENGTH 120
 
-// we double buffer: read one line in and leave one for the main program
-char line1[MAXLINELENGTH];
-char line2[MAXLINELENGTH];
-// our index into filling the current line
-uint8_t lineidx=0;
-// pointers to the double buffers
-char *currentline;
-char *lastline;
 bool inStandbyMode;
+
+// Buffer for circular DMA RX.  We should receive an interrupt at 1/2 and Full transfer
+static uint8_t UART_DMA_Buffer[UART_DMA_BUFFER_SIZE]; // Divisible by 2
 
 // Private struct
 typedef struct
@@ -38,22 +33,11 @@ typedef enum
 // Private function prototypes
 static void RunTracker_GPS_CreateThread(RunTracker_GPS * GPS);
 static void RunTracker_GPS_Thread(const void *arg);
-static bool RunTracker_GPS_parse(RunTracker_GPS * GPS, char * nmea);
+static bool RunTracker_GPS_parse(RunTracker_GPS * GPS);
+static NMEA_Return_Type RunTracker_GPS_sendCommand(RunTracker_GPS * GPS, char * txBuffer);
+static bool RunTracker_GPS_waitForResponse(RunTracker_GPS * gps, const char *resp);
 static uint8_t parseHex(char c);
 
-
-/*
-// Public Functions
-void RunTracker_GPS_init(RunTracker_GPS * const, UART_HandleTypeDef *);
-void RunTracker_GPS_rxCallback(RunTracker_GPS * const);
-void RunTracker_GPS_sendCommand(RunTracker_GPS * const, const char *);
-void RunTracker_GPS_pause(bool);
-bool RunTracker_GPS_wakeup(void);
-bool RunTracker_GPS_standby(void);
-bool RunTracker_GPS_LOCUS_StartLogger(void);
-bool RunTracker_GPS_LOCUS_StopLogger(void);
-bool RunTracker_GPS_LOCUS_ReadStatus(void);
- */
 
 // This is the main GPS thread for the RunTracker
 static void RunTracker_GPS_Thread(const void * argument)
@@ -62,12 +46,12 @@ static void RunTracker_GPS_Thread(const void * argument)
   GPS_mail_TypeDef  *pMail;
   osEvent     event;
 
-  // Configure the GPS
-  // TODO We should probably have some sort of ACK or check on DMA transfer complete
-  //      before sending subsequent commands
-  RunTracker_GPS_sendCommand(GPS, PMTK_SET_NMEA_OUTPUT_RMCGGA);
+  // Configure the GPS to output Recommended Minimum Navigation information only
+  RunTracker_GPS_sendCommand(GPS, PMTK_SET_NMEA_OUTPUT_RMCONLY);
   RunTracker_GPS_sendCommand(GPS, PMTK_SET_NMEA_UPDATE_1HZ);
-  RunTracker_GPS_sendCommand(GPS, PGCMD_ANTENNA);
+
+  // Start circular DMA transfers.  We should get callbacks on 1/2 and Full transfers
+  HAL_UART_Receive_DMA(GPS->huart, UART_DMA_Buffer, UART_DMA_BUFFER_SIZE);
 
   while(1)
   {
@@ -82,7 +66,7 @@ static void RunTracker_GPS_Thread(const void * argument)
       switch(pMail->event)
       {
       case PARSE_NMEA:
-        RunTracker_GPS_parse(GPS, currentline);
+        RunTracker_GPS_parse(GPS);
         break;
       }
 
@@ -109,9 +93,7 @@ void RunTracker_GPS_init(RunTracker_GPS * GPS, UART_HandleTypeDef * huart)
 {
   // Initialize all member variables
   GPS->paused 		= false;
-  lineidx 		= 0;
-  currentline 		= line1;
-  lastline 		= line2;
+  GPS->inStandby  = false;
 
   GPS->hour 		= 0;
   GPS->minute		= 0;
@@ -140,11 +122,127 @@ void RunTracker_GPS_init(RunTracker_GPS * GPS, UART_HandleTypeDef * huart)
 
   GPS->huart		= huart;
 
+  // Setup ring buffer
+  circularBuffer_Init(&GPS->ringBuffer);
+
   // Create the GPS Thread and associated input queue
   RunTracker_GPS_CreateThread(GPS);
 }
 
-static bool RunTracker_GPS_parse(RunTracker_GPS * GPS, char * nmea) {
+
+void RunTracker_GPS_rxCallback(RunTracker_GPS * GPS, bool firstHalf)
+{
+  GPS_mail_TypeDef *pMail;
+
+  if(GPS->paused) return;
+
+  //TODO This function should copy the rxbuffer to a local variable
+  // and pass a message off to the RunTracker thread to tell it to parse
+
+  // Push data into the ring buffer
+  uint8_t start = (firstHalf ? 0 : UART_DMA_BUFFER_SIZE / 2);
+  uint8_t end   = (firstHalf ? UART_DMA_BUFFER_SIZE / 2 : UART_DMA_BUFFER_SIZE);
+  for(uint8_t i = start; i<end; i++)
+  {
+    circularBuffer_Insert(&GPS->ringBuffer, UART_DMA_Buffer[i]);
+
+    // Check for newline to indicate complete string
+    if(UART_DMA_Buffer[i] == '\n')
+    {
+      // Send a mail message to parse the NMEA string
+      pMail = osMailAlloc(GPS->mailId, osWaitForever);
+
+      // TODO Make this something meaningful
+      pMail->event = PARSE_NMEA;
+      if(osMailPut(GPS->mailId, pMail) != osOK)
+      {
+        // TODO Some kind of error here
+      }
+    }
+  }
+}
+
+bool RunTracker_GPS_standby(RunTracker_GPS * GPS)
+{
+  if(GPS->inStandby) return false;
+
+  // Stop DMA transfers
+  HAL_UART_DMAStop(GPS->huart);
+
+  // Send command to put GPS in standby
+  RunTracker_GPS_sendCommand(GPS, PMTK_STANDBY);
+
+  // Wait for a response
+  if(RunTracker_GPS_waitForResponse(GPS, PMTK_STANDBY_SUCCESS))
+  {
+    GPS->inStandby = true;
+    return true;
+  }
+  else
+  {
+    // TODO handle error
+    return false;
+  }
+}
+
+bool RunTracker_GPS_wakeup(RunTracker_GPS * GPS)
+{
+  // Send a byte to wakeup the receiver
+  RunTracker_GPS_sendCommand(GPS, "");
+
+  // Wait for a response
+  if(RunTracker_GPS_waitForResponse(GPS, PMTK_AWAKE))
+  {
+    // Start circular DMA transfers.  We should get callbacks on 1/2 and Full transfers
+    HAL_UART_Receive_DMA(GPS->huart, UART_DMA_Buffer, UART_DMA_BUFFER_SIZE);
+    return true;
+  }
+  else
+  {
+    // TODO handle error
+    return false;
+  }
+}
+
+static bool RunTracker_GPS_waitForResponse(RunTracker_GPS * GPS, const char *resp)
+{
+  if(HAL_UART_Receive(GPS->huart, UART_DMA_Buffer, UART_DMA_BUFFER_SIZE, MAXWAITSENTENCE) == HAL_OK)
+  {
+    // TODO parse response via string compare
+    return true;
+  }
+  else
+  {
+    //TODO handle error
+    return false;
+  }
+
+}
+
+// Send a string command to the GPS unit with a blocking call to the UART
+static NMEA_Return_Type RunTracker_GPS_sendCommand(RunTracker_GPS * GPS, char * txBuffer)
+{
+  // Blocking transmit call
+  HAL_UART_Transmit(GPS->huart, (uint8_t *)txBuffer, strlen((const char*)txBuffer), HAL_MAX_DELAY);
+
+  // TODO: Wait for the PMTK_ACK packet and return the result
+  return NMEA_SUCCESS;
+}
+
+static bool RunTracker_GPS_parse(RunTracker_GPS * GPS)
+{
+  // Copy data into NMEA string?
+  // TODO We have now copied data several times... why bother with DMA?
+  char nmea[120] = {0};
+  char c = 0;
+  uint8_t i = 0;
+  while(i<120)
+  {
+    c = circularBuffer_Remove(&GPS->ringBuffer);
+    nmea[i++] = c;
+    if(c == '\n') break;
+  }
+
   // do checksum check
 
   // first look if we even have one
@@ -164,8 +262,10 @@ static bool RunTracker_GPS_parse(RunTracker_GPS * GPS, char * nmea) {
   int32_t degree;
   long minutes;
   char degreebuff[10];
+
   // look for a few common sentences
-  if (strstr(nmea, "$GPGGA")) {
+  if (strstr(nmea, "$GPGGA"))
+  {
     // found GGA
     char *p = nmea;
     // get time
@@ -268,7 +368,9 @@ static bool RunTracker_GPS_parse(RunTracker_GPS * GPS, char * nmea) {
     }
     return true;
   }
-  if (strstr(nmea, "$GPRMC")) {
+
+  if (strstr(nmea, "$GPRMC"))
+  {
     // found RMC
     char *p = nmea;
 
@@ -376,67 +478,6 @@ static bool RunTracker_GPS_parse(RunTracker_GPS * GPS, char * nmea) {
 
   return false;
 }
-
-void RunTracker_GPS_rxCallback(RunTracker_GPS * GPS)
-{
-  GPS_mail_TypeDef *pMail;
-
-  if(GPS->paused) return;
-
-  //TODO This function should copy the rxbuffer to a local variable
-  // and pass a message off to the RunTracker thread to tell it to parse
-
-  uint16_t cnt = GPS->huart->RxXferCount;
-
-  // Copy line
-  // TODO Make this more efficient with a memcpy, strfind, etc.
-  for(int i=0; i<cnt; i++)
-  {
-    char c = GPS->huart->pRxBuffPtr[cnt++];
-    if(c == '\n')
-    {
-      currentline[lineidx] = 0;
-
-      if(currentline == line1)
-      {
-        currentline = line2;
-        lastline = line1;
-      }
-      else
-      {
-        currentline = line1;
-        lastline = line2;
-      }
-
-
-      lineidx = 0;
-
-      // Send a mail message to parse the NMEA string
-      pMail = osMailAlloc(GPS->mailId, osWaitForever);
-
-      // TODO Make this something meaningful
-      pMail->event = PARSE_NMEA;
-      if(osMailPut(GPS->mailId, pMail) != osOK)
-      {
-        // TODO Some kind of error here
-      }
-    }
-
-    currentline[lineidx] = c;
-    if(lineidx >= MAXLINELENGTH)
-    {
-      lineidx = MAXLINELENGTH-1;
-    }
-
-  }
-
-}
-
-void RunTracker_GPS_sendCommand(RunTracker_GPS * GPS, uint8_t * txBuffer)
-{
-  HAL_UART_Transmit_DMA(GPS->huart, txBuffer, strlen((const char*)txBuffer));
-}
-
 
 static uint8_t parseHex(char c) {
   if (c < '0')
