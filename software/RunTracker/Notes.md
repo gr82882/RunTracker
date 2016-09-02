@@ -7,9 +7,13 @@
 
 ## Mission Manager
 - Do we need this?  What does it do?
+- Probaly should maintain a state machine
+  - Are we playing music, streaming bluetooth, etc.
+  - Something needs to grab data from sensors (e.g. altimeter) and pass them off (e.g. GPX logger)
+- Handle button press interrupts and shuttle them off to the appropriate thread/module
 
 ## OLED Display
-- Haven't really though about this
+- Haven't really thought about this
 - Need some kind of window manager to scroll through songs, settings, etc.
 - A clock / homescreen would be nice
 
