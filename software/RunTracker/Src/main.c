@@ -103,7 +103,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   // Initialize GPS with USART2
-  RunTracker_GPS_init(&GPS, &huart2);
+  RunTracker_GPS_Init(&GPS, &huart2);
 
   /* USER CODE END 2 */
 
@@ -186,7 +186,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
   if(huart == &huart2)
   {
-    RunTracker_GPS_rxCallback(&GPS, false);
+    RunTracker_GPS_RXCallback(&GPS, false);
   }
 }
 
@@ -194,7 +194,7 @@ void HAL_UART_RxHalfCpltCallback(UART_HandleTypeDef *huart)
 {
   if(huart == &huart2)
   {
-    RunTracker_GPS_rxCallback(&GPS, true);
+    RunTracker_GPS_RXCallback(&GPS, true);
   }
 }
 

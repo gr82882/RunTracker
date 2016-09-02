@@ -17,10 +17,114 @@ GPX_Return_Type GPXWriter_Init(GPXWriter * writer)
   writer->logCadence = false;
   writer->logElevation = false;
 
+  writer->temperature = 0;
+  writer->heartrate = 0;
+  writer->cadence = 0;
+  writer->lat = 0.0f;
+  writer->lon = 0.0f;
+  writer->elevation = 0.0f;
+
+  osMutexDef(dataMutex);
+  writer->dataMutex = osMutexCreate(osMutex(dataMutex));
+
   osMutexDef(fileMutex);
   writer->fileMutex = osMutexCreate(osMutex(fileMutex));
 
   return GPX_SUCCESS;
+}
+
+// Setter Functions
+GPX_Return_Type GPXWriter_SetTemperature(GPXWriter * writer, uint8_t temperature)
+{
+  if (osMutexWait(writer->dataMutex, osWaitForever) != osOK)
+  {
+    return GPX_MUTEX_FAIL;
+  }
+
+  writer->temperature = temperature;
+
+  osMutexRelease(writer->dataMutex);
+
+  return GPX_SUCCESS;
+}
+
+GPX_Return_Type GPXWriter_SetHeartrate(GPXWriter * writer, uint8_t heartrate)
+{
+  if (osMutexWait(writer->dataMutex, osWaitForever) != osOK)
+  {
+    return GPX_MUTEX_FAIL;
+  }
+
+  writer->heartrate = heartrate;
+
+  osMutexRelease(writer->dataMutex);
+
+  return GPX_SUCCESS;
+}
+
+GPX_Return_Type GPXWriter_SetCadence(GPXWriter * writer, uint8_t cadence)
+{
+  if (osMutexWait(writer->dataMutex, osWaitForever) != osOK)
+  {
+    return GPX_MUTEX_FAIL;
+  }
+
+  writer->cadence = cadence;
+
+  osMutexRelease(writer->dataMutex);
+
+  return GPX_SUCCESS;
+}
+
+GPX_Return_Type GPXWriter_SetPosition(GPXWriter * writer, float lat, float lon, float elevation)
+{
+  if (osMutexWait(writer->dataMutex, osWaitForever) != osOK)
+  {
+    return GPX_MUTEX_FAIL;
+  }
+
+  writer->lat = lat;
+  writer->lon = lon;
+  writer->elevation = elevation;
+
+  osMutexRelease(writer->dataMutex);
+
+  return GPX_SUCCESS;
+}
+
+// Create a trackpoint and write to the log
+GPX_Return_Type GPXWriter_Update(GPXWriter * writer)
+{
+  GPXTrackPoint track;
+  RTC_TimeTypeDef currTime;
+  RTC_DateTypeDef currDate;
+
+  HAL_RTC_GetTime(&hrtc, &currTime, RTC_FORMAT_BIN);
+  HAL_RTC_GetDate(&hrtc, &currDate, RTC_FORMAT_BIN);
+
+  track.year    = currDate.Year;
+  track.month   = currDate.Month;
+  track.day     = currDate.Date;
+  track.hour    = currTime.Hours;
+  track.minute  = currTime.Minutes;
+  track.seconds = currTime.Seconds;
+
+  if (osMutexWait(writer->dataMutex, osWaitForever) != osOK)
+  {
+    return GPX_MUTEX_FAIL;
+  }
+
+  track.cadence = writer->cadence;
+  track.latitudeDegrees = writer->lat;
+  track.longitudeDegrees = writer->lon;
+  track.elevation = writer->elevation;
+  track.temperature = writer->temperature;
+  track.heartrate = writer->heartrate;
+  track.cadence = writer->cadence;
+
+  osMutexRelease(writer->dataMutex);
+
+  return GPXWriter_WritePoint(writer, &track);
 }
 
 // Start a new GPX Log

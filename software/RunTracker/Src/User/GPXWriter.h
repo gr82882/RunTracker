@@ -22,6 +22,14 @@ typedef struct {
   bool logCadence;
   bool logElevation;
 
+  uint8_t temperature;
+  uint8_t heartrate;
+  uint8_t cadence;
+  float lat;
+  float lon;
+  float elevation;
+
+  osMutexId dataMutex;
   osMutexId fileMutex;
 
 } GPXWriter;
@@ -47,7 +55,13 @@ typedef enum {
 GPX_Return_Type GPXWriter_Init(GPXWriter *);
 GPX_Return_Type GPXWriter_StartLog(GPXWriter *);
 GPX_Return_Type GPXWriter_StopLog(GPXWriter *);
+GPX_Return_Type GPXWriter_Update(GPXWriter *);
+
 GPX_Return_Type GPXWriter_WritePoint(GPXWriter *, GPXTrackPoint *);
+GPX_Return_Type GPXWriter_SetTemperature(GPXWriter *, uint8_t temperature);
+GPX_Return_Type GPXWriter_SetHeartrate(GPXWriter *, uint8_t heartrate);
+GPX_Return_Type GPXWriter_SetCadence(GPXWriter *, uint8_t cadence);
+GPX_Return_Type GPXWriter_SetPosition(GPXWriter *, float lat, float lon, float elevation);
 
 
 #endif

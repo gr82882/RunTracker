@@ -46,11 +46,12 @@ typedef enum {
 
 
 // Public Functions
-void RunTracker_GPS_init(RunTracker_GPS *, UART_HandleTypeDef *);
-void RunTracker_GPS_rxCallback(RunTracker_GPS *, bool);
-void RunTracker_GPS_pause(RunTracker_GPS * GPS, bool);
-bool RunTracker_GPS_wakeup(RunTracker_GPS * GPS);
-bool RunTracker_GPS_standby(RunTracker_GPS * GPS);
+void RunTracker_GPS_Init(RunTracker_GPS *, UART_HandleTypeDef *);
+void RunTracker_GPS_RXCallback(RunTracker_GPS *, bool);
+void RunTracker_GPS_Pause(RunTracker_GPS * GPS, bool);
+bool RunTracker_GPS_Wakeup(RunTracker_GPS * GPS);
+bool RunTracker_GPS_Standby(RunTracker_GPS * GPS);
+
 
 // different commands to set the update rate from once a second (1 Hz) to 10 times a second (10Hz)
 // Note that these only control the rate at which the position is echoed, to actually speed up the

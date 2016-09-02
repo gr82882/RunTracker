@@ -33,10 +33,10 @@ typedef enum
 // Private function prototypes
 static void RunTracker_GPS_CreateThread(RunTracker_GPS * GPS);
 static void RunTracker_GPS_Thread(const void *arg);
-static bool RunTracker_GPS_parse(RunTracker_GPS * GPS);
-static NMEA_Return_Type RunTracker_GPS_sendCommand(RunTracker_GPS * GPS, char * txBuffer);
-static bool RunTracker_GPS_waitForResponse(RunTracker_GPS * gps, const char *resp);
-static uint8_t parseHex(char c);
+static bool RunTracker_GPS_Parse(RunTracker_GPS * GPS);
+static NMEA_Return_Type RunTracker_GPS_SendCommand(RunTracker_GPS * GPS, char * txBuffer);
+static bool RunTracker_GPS_WaitForResponse(RunTracker_GPS * gps, const char *resp);
+static uint8_t ParseHex(char c);
 
 
 // This is the main GPS thread for the RunTracker
@@ -47,8 +47,8 @@ static void RunTracker_GPS_Thread(const void * argument)
   osEvent     event;
 
   // Configure the GPS to output Recommended Minimum Navigation information only
-  RunTracker_GPS_sendCommand(GPS, PMTK_SET_NMEA_OUTPUT_RMCONLY);
-  RunTracker_GPS_sendCommand(GPS, PMTK_SET_NMEA_UPDATE_1HZ);
+  RunTracker_GPS_SendCommand(GPS, PMTK_SET_NMEA_OUTPUT_RMCONLY);
+  RunTracker_GPS_SendCommand(GPS, PMTK_SET_NMEA_UPDATE_1HZ);
 
   // Start circular DMA transfers.  We should get callbacks on 1/2 and Full transfers
   HAL_UART_Receive_DMA(GPS->huart, UART_DMA_Buffer, UART_DMA_BUFFER_SIZE);
@@ -66,7 +66,7 @@ static void RunTracker_GPS_Thread(const void * argument)
       switch(pMail->event)
       {
       case PARSE_NMEA:
-        RunTracker_GPS_parse(GPS);
+        RunTracker_GPS_Parse(GPS);
         break;
       }
 
@@ -89,7 +89,7 @@ static void RunTracker_GPS_CreateThread(RunTracker_GPS * GPS)
 
 
 
-void RunTracker_GPS_init(RunTracker_GPS * GPS, UART_HandleTypeDef * huart)
+void RunTracker_GPS_Init(RunTracker_GPS * GPS, UART_HandleTypeDef * huart)
 {
   // Initialize all member variables
   GPS->paused 		= false;
@@ -130,7 +130,7 @@ void RunTracker_GPS_init(RunTracker_GPS * GPS, UART_HandleTypeDef * huart)
 }
 
 
-void RunTracker_GPS_rxCallback(RunTracker_GPS * GPS, bool firstHalf)
+void RunTracker_GPS_RXCallback(RunTracker_GPS * GPS, bool firstHalf)
 {
   GPS_mail_TypeDef *pMail;
 
@@ -162,7 +162,7 @@ void RunTracker_GPS_rxCallback(RunTracker_GPS * GPS, bool firstHalf)
   }
 }
 
-bool RunTracker_GPS_standby(RunTracker_GPS * GPS)
+bool RunTracker_GPS_Standby(RunTracker_GPS * GPS)
 {
   if(GPS->inStandby) return false;
 
@@ -170,10 +170,10 @@ bool RunTracker_GPS_standby(RunTracker_GPS * GPS)
   HAL_UART_DMAStop(GPS->huart);
 
   // Send command to put GPS in standby
-  RunTracker_GPS_sendCommand(GPS, PMTK_STANDBY);
+  RunTracker_GPS_SendCommand(GPS, PMTK_STANDBY);
 
   // Wait for a response
-  if(RunTracker_GPS_waitForResponse(GPS, PMTK_STANDBY_SUCCESS))
+  if(RunTracker_GPS_WaitForResponse(GPS, PMTK_STANDBY_SUCCESS))
   {
     GPS->inStandby = true;
     return true;
@@ -185,13 +185,13 @@ bool RunTracker_GPS_standby(RunTracker_GPS * GPS)
   }
 }
 
-bool RunTracker_GPS_wakeup(RunTracker_GPS * GPS)
+bool RunTracker_GPS_Wakeup(RunTracker_GPS * GPS)
 {
   // Send a byte to wakeup the receiver
-  RunTracker_GPS_sendCommand(GPS, "");
+  RunTracker_GPS_SendCommand(GPS, "");
 
   // Wait for a response
-  if(RunTracker_GPS_waitForResponse(GPS, PMTK_AWAKE))
+  if(RunTracker_GPS_WaitForResponse(GPS, PMTK_AWAKE))
   {
     // Start circular DMA transfers.  We should get callbacks on 1/2 and Full transfers
     HAL_UART_Receive_DMA(GPS->huart, UART_DMA_Buffer, UART_DMA_BUFFER_SIZE);
@@ -204,7 +204,7 @@ bool RunTracker_GPS_wakeup(RunTracker_GPS * GPS)
   }
 }
 
-static bool RunTracker_GPS_waitForResponse(RunTracker_GPS * GPS, const char *resp)
+static bool RunTracker_GPS_WaitForResponse(RunTracker_GPS * GPS, const char *resp)
 {
   if(HAL_UART_Receive(GPS->huart, UART_DMA_Buffer, UART_DMA_BUFFER_SIZE, MAXWAITSENTENCE) == HAL_OK)
   {
@@ -220,7 +220,7 @@ static bool RunTracker_GPS_waitForResponse(RunTracker_GPS * GPS, const char *res
 }
 
 // Send a string command to the GPS unit with a blocking call to the UART
-static NMEA_Return_Type RunTracker_GPS_sendCommand(RunTracker_GPS * GPS, char * txBuffer)
+static NMEA_Return_Type RunTracker_GPS_SendCommand(RunTracker_GPS * GPS, char * txBuffer)
 {
   // Blocking transmit call
   HAL_UART_Transmit(GPS->huart, (uint8_t *)txBuffer, strlen((const char*)txBuffer), HAL_MAX_DELAY);
@@ -229,7 +229,9 @@ static NMEA_Return_Type RunTracker_GPS_sendCommand(RunTracker_GPS * GPS, char * 
   return NMEA_SUCCESS;
 }
 
-static bool RunTracker_GPS_parse(RunTracker_GPS * GPS)
+
+// TODO This function is garbage... re-write
+static bool RunTracker_GPS_Parse(RunTracker_GPS * GPS)
 {
   // Copy data into NMEA string?
   // TODO We have now copied data several times... why bother with DMA?
@@ -247,8 +249,8 @@ static bool RunTracker_GPS_parse(RunTracker_GPS * GPS)
 
   // first look if we even have one
   if (nmea[strlen(nmea)-4] == '*') {
-    uint16_t sum = parseHex(nmea[strlen(nmea)-3]) * 16;
-    sum += parseHex(nmea[strlen(nmea)-2]);
+    uint16_t sum = ParseHex(nmea[strlen(nmea)-3]) * 16;
+    sum += ParseHex(nmea[strlen(nmea)-2]);
 
     // check checksum
     for (uint8_t i=2; i < (strlen(nmea)-4); i++) {
@@ -479,7 +481,7 @@ static bool RunTracker_GPS_parse(RunTracker_GPS * GPS)
   return false;
 }
 
-static uint8_t parseHex(char c) {
+static uint8_t ParseHex(char c) {
   if (c < '0')
     return 0;
   if (c <= '9')
