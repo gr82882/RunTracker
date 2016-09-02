@@ -198,6 +198,44 @@ void HAL_UART_RxHalfCpltCallback(UART_HandleTypeDef *huart)
   }
 }
 
+// External interrupt (buttons) callback function.
+// TODO These need to map based on system state.  This function should probaly be moved to a Mission Manager thread
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  switch(GPIO_Pin)
+  {
+  case CENTER_SW_Pin:
+    break;
+
+  case SW_TR_Pin:
+    break;
+
+  case SW_TL_Pin:
+    break;
+
+  case SW_BR_Pin:
+    break;
+
+  case SW_BL_Pin:
+    break;
+
+  case ACCEL_INT1_Pin:
+    break;
+
+  case ACCEL_INT2_Pin:
+    break;
+
+  case VS1053_DREQ_Pin:
+    break;
+
+  case SW_HEADPHONE_Pin:
+    break;
+
+  default:
+    break;
+  }
+}
+
 /* USER CODE END 4 */
 
 /**
