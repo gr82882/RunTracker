@@ -51,6 +51,8 @@ void circularBuffer_Insert(CircularBuffer_TypeDef* CircularBuffer, CIRCULARBUFFE
     if (++CircularBuffer->in == &CircularBuffer->data[CIRCULARBUFFER_SIZE])
       CircularBuffer->in = CircularBuffer->data;
     CircularBuffer->count++;
+
+    osMutexRelease(CircularBuffer->ringMutex);
   }
 }
 
@@ -69,6 +71,8 @@ CIRCULARBUFFER_DATATYPE circularBuffer_Remove(CircularBuffer_TypeDef* CircularBu
     if (++CircularBuffer->out == &CircularBuffer->data[CIRCULARBUFFER_SIZE])
       CircularBuffer->out = CircularBuffer->data;
     CircularBuffer->count--;
+
+    osMutexRelease(CircularBuffer->ringMutex);
   }
   return data;
 }
@@ -85,8 +89,9 @@ CIRCULARBUFFER_COUNTTYPE circularBuffer_GetCount(
 
   if (osMutexWait(CircularBuffer->ringMutex, osWaitForever) == osOK)
   {
-
     count = CircularBuffer->count;
+
+    osMutexRelease(CircularBuffer->ringMutex);
   }
   return count;
 }

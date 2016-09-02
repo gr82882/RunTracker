@@ -2,7 +2,7 @@
  * RunTrackerGPS.h
  *
  *  Created on: Aug 30, 2016
- *      Author: gla1309
+ *      Author: G. Andrews
  */
 
 #ifndef RUNTRACKERGPS_H_
