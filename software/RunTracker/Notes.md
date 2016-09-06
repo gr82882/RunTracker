@@ -25,9 +25,13 @@
 
 ## LSM6DS3 (IMU)
 - On SPI1 (shared with altimeter & BC127)
+- Do we want this for anything other than a Pedometer?  (E.g. tilt sensor)
+ - Tap/Double Tap for song skip?
+- Has an 8KB FIFO to buffer up step counter & timestamp data
 
 ## LPS22HB (Altimeter)
 - On SPI1 (shared with IMU and BC127)
+- Has a 32-slit FIFO
 
 ## BC127 (Bluetooth)
 - On SPI1 (shared with IMU and altimeter)
@@ -36,3 +40,25 @@
 
 ## Power Management
 - Assume a 100mAh battery [like this one](https://www.adafruit.com/products/1570)
+- 11.5mm x 31 x 3.8mm might tuck in nicely on the back side of the board
+ 
+- Bluetooth is <1mA (connectable) and 15mA (streaming).  Unknown when sleeping
+- GPS is 25mA (acquisition) and 20mA (tracking)
+- Processor is 100uA/MHz.  12uA for RTC only
+- Audio is 11mA @ 3.3V (analog) and 11mA @ 1.8V (digital).  ~12uA in reset
+- Accelerometer is ~24uA in low-power mode (FIFO enabled, I assume)
+- Altimeter is 3-12uA depending on LC_EN bit (Low Current Enable)
+- microSD is maybe 20mA when reading?
+- OLED I_CI = ~240uA.  I_CC = 23-33mA (13V) (50-100% illuminated).  Sleep is 2uA
+
+## GPS / Audio Mode:
+- 20mA for GPS
+- 20mA for CPU/SDIO?
+- 22mA for Audio CODEC?
+- 1 mA for Pedometer / Altimeter?
+- OLED??
+- Yikes... that's ~1hr of operation (no good)
+
+
+
+
