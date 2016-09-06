@@ -33,3 +33,6 @@
 - On SPI1 (shared with IMU and altimeter)
 - SPI only used for commands.  Data should be coming across on I2S out of the VS1053
 - Hopefully can interface with heartrate monitor and bluetooth headphones
+
+## Power Management
+- Assume a 100mAh battery [like this one](https://www.adafruit.com/products/1570)
