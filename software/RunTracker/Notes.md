@@ -2,6 +2,7 @@
 - Run DMA in circular mode with a large-ish buffer (~1.5X a NMEA message?)
 - Interrupt on half and full DMA complete
   - Copy the half into a ring buffer in the GPS module
+    - Maybe we can complete processing the data before next DMA complete to prevent having to copy?
   - DMA continues to fill the other half while you are copying
 - GPS module processes ring buffer 
 
