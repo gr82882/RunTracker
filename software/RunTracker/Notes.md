@@ -22,20 +22,23 @@
 - This is on SPI2 (dedicated)
 - Need an interrupt handler for DREQ that then does DMA transfer of file data via SPI2
 - Need to enable I2S output when bluetooth is enabled
+- SPI clock is CLKI/4 = 12.288 / 4 = 3MHz
 
 ## LSM6DS3 (IMU)
-- On SPI1 (shared with altimeter & BC127)
+- On SPI1 (shared with altimeter)
 - Do we want this for anything other than a Pedometer?  (E.g. tilt sensor)
  - Tap/Double Tap for song skip?
 - Has an 8KB FIFO to buffer up step counter & timestamp data
+- SPI clock is 10MHz max
 
 ## LPS22HB (Altimeter)
-- On SPI1 (shared with IMU and BC127)
+- On SPI1 (shared with IMU)
 - Has a 32-slit FIFO
+- SPI clock is 10Mhz max
 
 ## BC127 (Bluetooth)
-- On SPI1 (shared with IMU and altimeter)
-- SPI only used for commands.  Data should be coming across on I2S out of the VS1053
+- On USART1 (dedicated)
+- USART only used for commands.  Data should be coming across on I2S out of the VS1053
 - Hopefully can interface with heartrate monitor and bluetooth headphones
 
 ## Power Management
