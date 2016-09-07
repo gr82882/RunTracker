@@ -46,7 +46,8 @@
 
 /* USER CODE BEGIN Includes */
 #include "RunTrackerGPS.h"
-
+#include "GPXWriter.h"
+#include "SharedSpi.h"
 
 /* USER CODE END Includes */
 
@@ -54,7 +55,11 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-RunTracker_GPS GPS;
+static RunTracker_GPS GPS;
+static GPXWriter GPX;
+static SharedSpi sharedSpi1;
+static int8_t baro;
+static int8_t accel;
 
 /* USER CODE END PV */
 
@@ -104,6 +109,14 @@ int main(void)
 
   // Initialize GPS with USART2
   RunTracker_GPS_Init(&GPS, &huart2);
+
+  // Initialize SPI1 as shared and register the chip select lines
+  SharedSpi_Init(&sharedSpi1, &hspi1);
+  accel = SharedSpi_Register_CS(&sharedSpi1, ACCEL_CS_GPIO_Port, ACCEL_CS_Pin);
+  baro = SharedSpi_Register_CS(&sharedSpi1, BARO_CS_GPIO_Port, BARO_CS_Pin);
+
+  // Initialize a GPX Writer
+  GPXWriter_Init(&GPX);
 
   /* USER CODE END 2 */
 
