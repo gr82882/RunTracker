@@ -10,6 +10,7 @@
 #define LSM6DS3_H_
 
 #include "stm32f4xx.h"
+#include "SharedSpi.h"
 
 // Sensor settings
 typedef struct {
