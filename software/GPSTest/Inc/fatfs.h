@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
-  * File Name          : mxconstants.h
-  * Description        : This file contains the common defines of the application
+  * @file   fatfs.h
+  * @brief  Header for fatfs applications
   ******************************************************************************
   *
   * COPYRIGHT(c) 2016 STMicroelectronics
@@ -30,52 +30,33 @@
   *
   ******************************************************************************
   */
+
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __MXCONSTANT_H
-#define __MXCONSTANT_H
-  /* Includes ------------------------------------------------------------------*/
+#ifndef __fatfs_H
+#define __fatfs_H
+#ifdef __cplusplus
+ extern "C" {
+#endif
+
+#include "ff.h"
+#include "ff_gen_drv.h"
+#include "sd_diskio.h" /* defines SD_Driver as external */
 
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
 
-/* Private define ------------------------------------------------------------*/
+extern uint8_t retSD; /* Return value for SD */
+extern char SD_Path[4]; /* SD logical drive path */
 
-#define SW_TR_Pin GPIO_PIN_1
-#define SW_TR_GPIO_Port GPIOC
-#define SW_TL_Pin GPIO_PIN_2
-#define SW_TL_GPIO_Port GPIOC
-#define SW_BR_Pin GPIO_PIN_3
-#define SW_BR_GPIO_Port GPIOC
-#define CENTER_SW_Pin GPIO_PIN_0
-#define CENTER_SW_GPIO_Port GPIOA
-#define GPS_UART_RX_Pin GPIO_PIN_2
-#define GPS_UART_RX_GPIO_Port GPIOA
-#define GPS_UART_TX_Pin GPIO_PIN_3
-#define GPS_UART_TX_GPIO_Port GPIOA
-#define SW_DOWN_Pin GPIO_PIN_5
-#define SW_DOWN_GPIO_Port GPIOA
-#define SW_LEFT_Pin GPIO_PIN_6
-#define SW_LEFT_GPIO_Port GPIOA
-#define SW_UP_Pin GPIO_PIN_7
-#define SW_UP_GPIO_Port GPIOA
-#define SW_BL_Pin GPIO_PIN_4
-#define SW_BL_GPIO_Port GPIOC
-#define SW_HEADPHONE_Pin GPIO_PIN_8
-#define SW_HEADPHONE_GPIO_Port GPIOA
-#define VS1053_RST_Pin GPIO_PIN_9
-#define VS1053_RST_GPIO_Port GPIOB
-/* USER CODE BEGIN Private defines */
+void MX_FATFS_Init(void);
 
-/* USER CODE END Private defines */
+/* USER CODE BEGIN Prototypes */
 
-/**
-  * @}
-  */ 
+/* USER CODE END Prototypes */
+#ifdef __cplusplus
+}
+#endif
+#endif /*__fatfs_H */
 
-/**
-  * @}
-*/ 
-
-#endif /* __MXCONSTANT_H */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

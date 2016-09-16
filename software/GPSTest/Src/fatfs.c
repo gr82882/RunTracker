@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
-  * File Name          : mxconstants.h
-  * Description        : This file contains the common defines of the application
+  * @file   fatfs.c
+  * @brief  Code for fatfs applications
   ******************************************************************************
   *
   * COPYRIGHT(c) 2016 STMicroelectronics
@@ -30,52 +30,47 @@
   *
   ******************************************************************************
   */
-/* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __MXCONSTANT_H
-#define __MXCONSTANT_H
-  /* Includes ------------------------------------------------------------------*/
 
-/* USER CODE BEGIN Includes */
+#include "fatfs.h"
 
-/* USER CODE END Includes */
+uint8_t retSD;    /* Return value for SD */
+char SD_Path[4];  /* SD logical drive path */
 
-/* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN Variables */
+FATFS SDFatFs;  /* File system object for SD card logical drive */
+/* USER CODE END Variables */    
 
-#define SW_TR_Pin GPIO_PIN_1
-#define SW_TR_GPIO_Port GPIOC
-#define SW_TL_Pin GPIO_PIN_2
-#define SW_TL_GPIO_Port GPIOC
-#define SW_BR_Pin GPIO_PIN_3
-#define SW_BR_GPIO_Port GPIOC
-#define CENTER_SW_Pin GPIO_PIN_0
-#define CENTER_SW_GPIO_Port GPIOA
-#define GPS_UART_RX_Pin GPIO_PIN_2
-#define GPS_UART_RX_GPIO_Port GPIOA
-#define GPS_UART_TX_Pin GPIO_PIN_3
-#define GPS_UART_TX_GPIO_Port GPIOA
-#define SW_DOWN_Pin GPIO_PIN_5
-#define SW_DOWN_GPIO_Port GPIOA
-#define SW_LEFT_Pin GPIO_PIN_6
-#define SW_LEFT_GPIO_Port GPIOA
-#define SW_UP_Pin GPIO_PIN_7
-#define SW_UP_GPIO_Port GPIOA
-#define SW_BL_Pin GPIO_PIN_4
-#define SW_BL_GPIO_Port GPIOC
-#define SW_HEADPHONE_Pin GPIO_PIN_8
-#define SW_HEADPHONE_GPIO_Port GPIOA
-#define VS1053_RST_Pin GPIO_PIN_9
-#define VS1053_RST_GPIO_Port GPIOB
-/* USER CODE BEGIN Private defines */
+void MX_FATFS_Init(void) 
+{
+  /*## FatFS: Link the SD driver ###########################*/
+  retSD = FATFS_LinkDriver(&SD_Driver, SD_Path);
 
-/* USER CODE END Private defines */
+  /* USER CODE BEGIN Init */
+  if(retSD == FR_OK)
+  {
+    // Mount the filesystem
+    if(f_mount(&SDFatFs, (TCHAR const*)SD_Path, 0) != FR_OK)
+    {
+      //Error_Handler();
+    }
+  }
+  /* USER CODE END Init */
+}
 
 /**
-  * @}
-  */ 
+  * @brief  Gets Time from RTC 
+  * @param  None
+  * @retval Time in DWORD
+  */
+DWORD get_fattime(void)
+{
+  /* USER CODE BEGIN get_fattime */
+  return 0;
+  /* USER CODE END get_fattime */  
+}
 
-/**
-  * @}
-*/ 
+/* USER CODE BEGIN Application */
+     
+/* USER CODE END Application */
 
-#endif /* __MXCONSTANT_H */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
