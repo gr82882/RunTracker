@@ -41,7 +41,6 @@
 #include "tim.h"
 #include "usart.h"
 #include "usb_device.h"
-#include "wwdg.h"
 #include "gpio.h"
 
 /* USER CODE BEGIN Includes */
@@ -101,23 +100,11 @@ int main(void)
   MX_SPI2_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
-  MX_WWDG_Init();
   MX_TIM2_Init();
   MX_RTC_Init();
 
   /* USER CODE BEGIN 2 */
-
-  // Initialize GPS with USART2
   RunTracker_GPS_Init(&GPS, &huart2);
-
-  // Initialize SPI1 as shared and register the chip select lines
-  SharedSpi_Init(&sharedSpi1, &hspi1);
-  accel = SharedSpi_Register_CS(&sharedSpi1, ACCEL_CS_GPIO_Port, ACCEL_CS_Pin);
-  baro = SharedSpi_Register_CS(&sharedSpi1, BARO_CS_GPIO_Port, BARO_CS_Pin);
-
-  // Initialize a GPX Writer
-  GPXWriter_Init(&GPX);
-
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
@@ -154,9 +141,9 @@ void SystemClock_Config(void)
 
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE|RCC_OSCILLATORTYPE_LSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
+  RCC_OscInitStruct.LSEState = RCC_LSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 12;
@@ -180,7 +167,7 @@ void SystemClock_Config(void)
   }
 
   PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
-  PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+  PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
   {
     Error_Handler();

@@ -224,7 +224,7 @@ static NMEA_Return_Type RunTracker_GPS_SendCommand(RunTracker_GPS * GPS, char * 
 {
   // Blocking transmit call
   HAL_UART_Transmit(GPS->huart, (uint8_t *)txBuffer, strlen((const char*)txBuffer), HAL_MAX_DELAY);
-
+  HAL_Delay(100);
   // TODO: Wait for the PMTK_ACK packet and return the result
   return NMEA_SUCCESS;
 }

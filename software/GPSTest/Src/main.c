@@ -96,8 +96,8 @@ int main(void)
   MX_RTC_Init();
   MX_USB_DEVICE_Init();
 
-#if 0
   /* USER CODE BEGIN 2 */
+#if 0
   FIL MyFile;
   if(f_open(&MyFile, "STM32.TXT", FA_CREATE_ALWAYS | FA_WRITE) != FR_OK)
   {
@@ -109,7 +109,8 @@ int main(void)
     // Initialize GPS with USART2
     RunTracker_GPS_Init(&GPS, &huart2);
   }
-
+#else
+  RunTracker_GPS_Init(&GPS, &huart2);
 #endif
 
   // Create a filesystem

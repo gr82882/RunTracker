@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <errno.h>
 
 // how long are max NMEA lines to parse?
 #define MAXLINELENGTH 120
@@ -98,6 +99,7 @@ void RunTracker_GPS_RXCallback(RunTracker_GPS * GPS, bool firstHalf)
     if(UART_DMA_Buffer[i] == '\n')
     {
       //TODO: Parse the message
+      RunTracker_GPS_Parse(GPS);
     }
   }
 }
@@ -166,6 +168,7 @@ static NMEA_Return_Type RunTracker_GPS_SendCommand(RunTracker_GPS * GPS, char * 
   HAL_UART_Transmit(GPS->huart, (uint8_t *)txBuffer, strlen((const char*)txBuffer), HAL_MAX_DELAY);
 
   // TODO: Wait for the PMTK_ACK packet and return the result
+  HAL_Delay(10);
   return NMEA_SUCCESS;
 }
 
