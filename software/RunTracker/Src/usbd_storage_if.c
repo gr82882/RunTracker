@@ -168,7 +168,7 @@ USBD_StorageTypeDef USBD_Storage_Interface_fops_FS =
 *******************************************************************************/
 int8_t STORAGE_Init_FS (uint8_t lun)
 {
-  /* USER CODE BEGIN 2 */
+  /* USER CODE BEGIN 2 */ 
   //SD_initialize(STORAGE_LUN_NBR);
   BSP_SD_Init();
   return (USBD_OK);

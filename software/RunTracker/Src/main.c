@@ -47,6 +47,7 @@
 #include "RunTrackerGPS.h"
 #include "GPXWriter.h"
 #include "SharedSpi.h"
+#include "VS1053.h"
 
 /* USER CODE END Includes */
 
@@ -55,10 +56,15 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 static RunTracker_GPS GPS;
+static VS1053 Codec;
 static GPXWriter GPX;
 static SharedSpi sharedSpi1;
+static SharedSpi sharedSpi2;
 static int8_t baro;
 static int8_t accel;
+static int8_t oled;
+static int8_t vs1053_data;
+static int8_t vs1053_cmd;
 
 /* USER CODE END PV */
 
@@ -105,6 +111,19 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
   RunTracker_GPS_Init(&GPS, &huart2);
+  SharedSpi_Init(&sharedSpi1, &hspi1);
+  SharedSpi_Init(&sharedSpi2, &hspi2);
+
+  baro  = SharedSpi_Register_CS(&sharedSpi1, BARO_CS_GPIO_Port, BARO_CS_Pin);
+  accel = SharedSpi_Register_CS(&sharedSpi1, ACCEL_CS_GPIO_Port, ACCEL_CS_Pin);
+  oled  = SharedSpi_Register_CS(&sharedSpi1, OLED_CS_GPIO_Port, OLED_CS_Pin);
+
+  vs1053_data = SharedSpi_Register_CS(&sharedSpi2, VS1053_DCS_GPIO_Port, VS1053_DCS_Pin);
+  vs1053_cmd  = SharedSpi_Register_CS(&sharedSpi2, VS1053_CS_GPIO_Port, VS1053_CS_Pin);
+
+  VS1053_Init(&Codec, &sharedSpi2, vs1053_data, vs1053_cmd);
+  VS1053_SineTest(&Codec, 0x44, 10000);
+
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */

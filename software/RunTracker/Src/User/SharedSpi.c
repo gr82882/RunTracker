@@ -66,15 +66,28 @@ SharedSpi_Return_Type SharedSpi_ReceiveData(SharedSpi * spi, int8_t device, uint
   if(HAL_SPI_Receive(spi->spiHandle, rxData, numBytes, HAL_MAX_DELAY) != HAL_OK)
     return SHARED_SPI_FAIL;
 
+  if(selectDevice)
+  {
+    if(SharedSpi_DeselectDevice(spi) != SHARED_SPI_SUCCESS)
+        return SHARED_SPI_FAIL;
+  }
+
   return SHARED_SPI_SUCCESS;
 }
 
 SharedSpi_Return_Type SharedSpi_SendReceiveData(SharedSpi * spi, int8_t device, uint8_t * txData, uint8_t * rxData, uint16_t numBytes)
 {
+  // Make sure device is registered
+  if(device > spi->numDevices)
+    return SHARED_SPI_FAIL;
+
   if(SharedSpi_SelectDevice(spi, device) != SHARED_SPI_SUCCESS)
     return SHARED_SPI_FAIL;
 
   if(HAL_SPI_TransmitReceive(spi->spiHandle, txData, rxData, numBytes, HAL_MAX_DELAY) != HAL_OK)
+    return SHARED_SPI_FAIL;
+
+  if(SharedSpi_DeselectDevice(spi) != SHARED_SPI_SUCCESS)
     return SHARED_SPI_FAIL;
 
   return SHARED_SPI_SUCCESS;
@@ -83,7 +96,7 @@ SharedSpi_Return_Type SharedSpi_SendReceiveData(SharedSpi * spi, int8_t device, 
 SharedSpi_Return_Type SharedSpi_SendDataDMA(SharedSpi * spi, int8_t device, uint8_t * txData, uint16_t numBytes)
 {
   // Make sure device is registered
-  if(device < spi->numDevices)
+  if(device > spi->numDevices)
     return SHARED_SPI_FAIL;
 
   // Lock the mutex guard
@@ -103,7 +116,7 @@ SharedSpi_Return_Type SharedSpi_SendDataDMA(SharedSpi * spi, int8_t device, uint
 SharedSpi_Return_Type SharedSpi_ReceiveDataDMA(SharedSpi * spi, int8_t device, uint8_t * rxData, uint16_t numBytes)
 {
   // Make sure device is registered
-  if(device < spi->numDevices)
+  if(device > spi->numDevices)
     return SHARED_SPI_FAIL;
 
   // Lock the mutex guard
@@ -133,7 +146,7 @@ void SharedSpi_TxCallback(SharedSpi * spi, bool firstHalf)
 SharedSpi_Return_Type SharedSpi_SelectDevice(SharedSpi * spi, uint8_t device)
 {
   // Make sure device is registered
-    if(device < spi->numDevices)
+    if(device > spi->numDevices)
       return SHARED_SPI_FAIL;
 
     // Lock the mutex guard
