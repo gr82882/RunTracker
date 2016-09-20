@@ -13,10 +13,17 @@
 #include "SharedSpi.h"
 #include <stdbool.h>
 
+
+#define VS1053_DATABUFFERLEN 32
+
 typedef struct {
   SharedSpi * spi;
   uint8_t dataHandle;
   uint8_t cmdHandle;
+  bool playingMusic;
+
+  uint8_t trackBuffer[VS1053_DATABUFFERLEN];
+
 } VS1053;
 
 // Public Interfaces
@@ -26,6 +33,7 @@ void VS1053_DREQ_Callback(VS1053 * codec);
 void VS1053_Reset(VS1053 * codec);
 void VS1053_SoftReset(VS1053 * codec);
 void VS1053_SineTest(VS1053 * codec, uint8_t n, uint16_t ms);
+void VS1053_StartPlayingFile(VS1053 * codec, const char * filename);
 
 // Definitions
 #define VS1053_SCI_READ 0x03
@@ -68,6 +76,5 @@ void VS1053_SineTest(VS1053 * codec, uint8_t n, uint16_t ms);
 #define VS1053_SCI_AICTRL2 0x0E
 #define VS1053_SCI_AICTRL3 0x0F
 
-#define VS1053_DATABUFFERLEN 32
 
 #endif

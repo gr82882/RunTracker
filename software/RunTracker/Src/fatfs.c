@@ -48,17 +48,17 @@ void MX_FATFS_Init(void)
 
   /* USER CODE BEGIN Init */
   /* additional user code for init */
-#if 0
+#if 1
   /*##-2- Register the file system object to the FatFs module ##############*/
   if(f_mount(&SDFatFs, (TCHAR const*)SD_Path, 0) != FR_OK)
   {
     /* FatFs Initialization Error */
   }
 
-  if(f_open(&MyFile, "STM32.TXT", FA_CREATE_ALWAYS | FA_WRITE) != FR_OK)
+  //if(f_open(&MyFile, "STM32.TXT", FA_CREATE_ALWAYS | FA_WRITE) != FR_OK)
   {
     /* 'STM32.TXT' file Open for write Error */
-    Error_Handler();
+    //Error_Handler();
   }
 #endif
 

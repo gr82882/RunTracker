@@ -97,10 +97,10 @@ void MX_FREERTOS_Init(void) {
 void StartDefaultTask(void const * argument)
 {
   /* init code for FATFS */
-  MX_FATFS_Init();
+  //MX_FATFS_Init();
 
   /* init code for USB_DEVICE */
-  MX_USB_DEVICE_Init();
+  //MX_USB_DEVICE_Init();
 
   /* USER CODE BEGIN StartDefaultTask */
   /* Infinite loop */

@@ -108,6 +108,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM2_Init();
   MX_RTC_Init();
+  MX_FATFS_Init();
 
   /* USER CODE BEGIN 2 */
   RunTracker_GPS_Init(&GPS, &huart2);
@@ -122,7 +123,8 @@ int main(void)
   vs1053_cmd  = SharedSpi_Register_CS(&sharedSpi2, VS1053_CS_GPIO_Port, VS1053_CS_Pin);
 
   VS1053_Init(&Codec, &sharedSpi2, vs1053_data, vs1053_cmd);
-  VS1053_SineTest(&Codec, 0x44, 10000);
+  //VS1053_SineTest(&Codec, 0x44, 1000);
+  VS1053_StartPlayingFile(&Codec, "Oasis.mp3");
 
   /* USER CODE END 2 */
 
@@ -217,6 +219,14 @@ void HAL_UART_RxHalfCpltCallback(UART_HandleTypeDef *huart)
   }
 }
 
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+  if(hspi == &hspi2)
+  {
+	  SharedSpi_TxCallback(&sharedSpi2, false);
+  }
+}
+
 // External interrupt (buttons) callback function.
 // TODO These need to map based on system state.  This function should probaly be moved to a Mission Manager thread
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
@@ -245,6 +255,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     break;
 
   case VS1053_DREQ_Pin:
+    VS1053_DREQ_Callback(&Codec);
     break;
 
   case SW_HEADPHONE_Pin:
